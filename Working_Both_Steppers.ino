@@ -1,23 +1,23 @@
-
-// Include the AccelStepper library:
 #include "AccelStepper.h"
 #include <Servo.h>
 
-// Define stepper motor connections and motor interface type. 
-// Motor interface type must be set to 1 when using a driver
+// Define stepper motor connections and motor interface type
+//Top Stepper
 #define dirPin 2
 #define stepPin 3
 
+//Bot Stepper
 #define dirPin2 4
 #define stepPin2 5
 
 #define motorInterfaceType 1
 
 #define spr 200 //stepsPerRevolution
-#define homePin 10
-#define leftButtonPin 7
-#define rightButtonPin 8
-#define limitSwitchPin 6
+
+#define button1Pin 6
+#define button2Pin 7
+#define button3Pin 8
+#define limitSwitchPin 12
 
 // Create a new instance of the AccelStepper class:
 AccelStepper stepper = AccelStepper(motorInterfaceType, stepPin, dirPin);
@@ -30,29 +30,34 @@ bool prevRightButtonState = HIGH;
 
 
 //Servo
-Servo myservo;
-const int servoPin = 9; // PWM pin for the servo
+Servo topservo;
+Servo botservo;
 const int posDown = 30;
 const int posUp = 100;
 
+int sprDistance = 0;
+
 void setup() {
-  //Serial.begin(9600);
+  Serial.begin(9600);
   // Set the maximum speed in steps per second:
-  stepper.setMaxSpeed(500);
-  stepper2.setMaxSpeed(500);
+  stepper.setMaxSpeed(1000);
+  stepper2.setMaxSpeed(1000);
 
-  pinMode(homePin, INPUT_PULLUP);   // Enable internal pullup resistor
-  pinMode(leftButtonPin, INPUT_PULLUP);   // Enable internal pullup resistor
-  pinMode(rightButtonPin, INPUT_PULLUP); // Enable internal pullup resistor
-  pinMode(limitSwitchPin, INPUT_PULLUP);  // Enable internal pullup resistor
+  // Enable internal pullup resistors
+  pinMode(button1Pin, INPUT_PULLUP);
+  pinMode(button2Pin, INPUT_PULLUP);   
+  pinMode(button3Pin, INPUT_PULLUP); 
+  pinMode(limitSwitchPin, INPUT_PULLUP);
 
-  
+
+  topservo.attach(9);
+  botservo.attach(10);
+  Serial.println("WELCOME TO SQUEEGEE SYSTEM!!");
 }
 
 
-
 void Home() {
-    myservo.write(posUp);
+    Serial.println("Homing!!");
     //Serial.println("HOME PIN = ON");
     while (digitalRead(limitSwitchPin) == HIGH) {
       //Serial.println("LIMIT PIN = OFF");
@@ -65,7 +70,7 @@ void Home() {
       stepper.run();
       stepper2.run();
     }
-    Serial.println("LIMIT PIN = ON");
+    Serial.println("Home Process Done!");
     stepper.setCurrentPosition(0.0);
 
 }
@@ -73,61 +78,137 @@ void Home() {
 
 
 void moveRight() {
-  myservo.write(posDown);
-  delay(50);
-  while (digitalRead(rightButtonPin) == LOW){
-    stepper.setSpeed(-500);
-    stepper.moveTo(200);
+    Serial.println("Moving Right");
+    delay(50);
+    while (stepper.currentPosition() != -spr*sprDistance){
+      stepper.setSpeed(-500);
+      //stepper.moveTo(200);
+      stepper.moveTo(-200*14);
+      stepper.runSpeedToPosition();
 
-    stepper2.setSpeed(-500);
-    stepper2.moveTo(200);
-    
-    stepper.run();
-    stepper2.run();
-  }
+      stepper2.setSpeed(-500);
+      //stepper2.moveTo(200);
+      stepper2.moveTo(-200*14);
+      stepper2.runSpeedToPosition();
+      
+      //stepper.run();
+      //stepper2.run();
+    }
 }
 
 void moveLeft() {
-  myservo.write(posDown);
-  delay(50);
-  while (digitalRead(leftButtonPin) == LOW){
-    stepper.setSpeed(500);
-    stepper.moveTo(200);
+    Serial.println("Moving Left");
+    delay(50);
+    while (stepper.currentPosition() != spr*sprDistance){
+      stepper.setSpeed(500);
+      //stepper.moveTo(200);
+      stepper.moveTo(200*14);
+      stepper.runSpeedToPosition();
 
-    stepper2.setSpeed(500);
-    stepper2.moveTo(200);
-
-    stepper.run();
-    stepper2.run();
-  }
+      stepper2.setSpeed(500);
+      //stepper2.moveTo(200);
+      stepper2.moveTo(500*14);
+      stepper2.runSpeedToPosition();
+      
+      //stepper.run();
+      //stepper2.run();
+    }
 }
 
-void loop() { 
+
+void servoDown(){
+    delay(50);
+    //Serial.println("Squeegee Down");
+    topservo.write(posDown);
+    botservo.write(posDown);
+}
+
+void servoUp(){
+    delay(50);
+    //Serial.println("Squeegee Up");
+    topservo.write(posUp);
+    botservo.write(posUp);
+}
+
+
+
+
+void loop() {
 
   // Check button presses and releases
-  bool currentLeftButtonState = digitalRead(leftButtonPin);
-  bool currentRightButtonState = digitalRead(rightButtonPin);
+  //bool currentLeftButtonState = digitalRead(leftButtonPin);
+  //bool currentRightButtonState = digitalRead(rightButtonPin);
 
-  if (digitalRead(homePin) == LOW) {
+
+  //FULL WIPE
+  if (digitalRead(button1Pin) == LOW) {
+
+    Serial.println("Button 1 Pressed!");
+    servoUp();
+
+    Home();
+    sprDistance = 14;
+    
+    delay(500);
+    servoDown();
+    
+    moveRight();
+    delay(500);
+    Home();
+
+    servoUp();
+  }
+
+
+  //1st Half Wipe
+  if (digitalRead(button2Pin) == LOW) {
+    
+    Serial.println("Button 2 Pressed!");
+    servoUp();
+
+    Home();
+    sprDistance = 7;
+    servoDown();
+    
+    delay(500);
+    moveRight();
+    delay(500);
+    Home();
+
+    servoUp();
+  }
+
+  //2nd Half Wipe
+  if (digitalRead(button3Pin) == LOW) {
+    
+    Serial.println("Button 3 Pressed!");
+    servoUp();
+
+    Home();
+    sprDistance = 7;
+    servoUp();
+    
+    delay(500);
+    moveRight();
+    servoDown();
+    delay(500);
+
+
+    sprDistance = 14;
+    moveRight();
+    delay(500);
+
+    sprDistance = -7;
+    moveLeft();
+    delay(500);
+
+    servoUp();
     Home();
   }
 
-  Serial.println("HOME PIN = OFF");
-  
-  
-  // Move gantry left if left button pressed and previously released
-  if (currentLeftButtonState == LOW) {
-    moveLeft();
-  }
-
-  // Move gantry right if right button pressed and previously released
-  if (currentRightButtonState == LOW) {
-    moveRight();
-  }
-
    // Update previous button states
-  prevLeftButtonState = currentLeftButtonState;
-  prevRightButtonState = currentRightButtonState;
+  //prevLeftButtonState = currentLeftButtonState;
+  //prevRightButtonState = currentRightButtonState;
 }
 
 
@@ -145,7 +226,7 @@ void moveRight() {
 }
 
 void moveLeft() {
- // while (stepper.currentPosition() != spr*14) //LEF
+ // while (stepper.currentPosition() != spr*14) //LEFT
     stepper.setSpeed(500);
     stepper.moveTo(200*14);
     stepper.runSpeedToPosition();
